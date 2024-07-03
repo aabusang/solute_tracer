@@ -1,56 +1,108 @@
+import os, sys
 import pandas as pd
-import mysql.connector as connector
+import mysql.connector
+from mysql.connector import Error
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
-def num_or_zero(value):
+
+
+def main():
+    connection = connect_to_database()
+    if connection:
+        upload_data_to_db(connection)
+        connection.close()
+        print("Data uploaded successfully!")
+    else:
+        print("Failed to connect to the database")
+
+
+
+def connect_to_database():
     try:
-        print(f"trying to convert {value} to float")
-        return float(value)
-    except ValueError:
-        print(f"Failed to convert {value} to float")
-        return 0.0
+        connection = mysql.connector.connect(
+            host=os.getenv('DB_HOST'),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            database=os.getenv('DB_NAME')
+        )
+        if connection.is_connected():
+            print("Successfully connected to the database")
+            return connection
+    except Error as e:
+        print(f"Error: {e}")
+        return None
     
-def upload_data_to_db():
-    # Database configuration
-    db_config = {
-        'database': 'solute_tracer',
-        'user': 'aabusang',
-        'password': '',  
-        'host': '',
-        'port': '3306'
-    }
 
-    # Connect to the database
-    conn = connector.connect(**db_config)
-    cursor = conn.cursor()
+def upload_data_to_db(connection):
 
-    # Read the Excel file
+    helpers = HelperFunctions()
+
     xls = pd.ExcelFile('data/db.xlsm')
     sheets = xls.sheet_names[2:]
-    counter = 0
     for sheet in sheets:
         df = pd.read_excel(xls, sheet_name=sheet, skiprows=1, usecols="B:E")
         df = df.set_index('Parameter')
 
-        flow_rate = num_or_zero(df.loc['Flow Rate']['Values'])
-        flow_velocity = num_or_zero(df.loc['Flow Velocity']['Values'])
-        print(f"Flow Rate: {flow_rate}, Flow Velocity: {flow_velocity} ")
+
+        # try:
+        #     cursor = connection.cursor()
+                
+
+        #     cursor.executemany(query, data)
+        #     connection.commit()
+        #     print(f"{cursor.rowcount} records inserted successfully.")
         
-        insert_query = """ INSERT INTO stream_hydrologies (flow_rate, flow_velocity) VALUES (%s, %s) """
+        # except Error as e:
+        #     print(f"Error: {e}")
+        #     connection.rollback()
+        # finally:
+        #     if cursor:
+        #         cursor.close()
+
+class HelperFunctions:
+    def num_or_zero(value):
+        try:
+            return float(value)
+        except ValueError:
+            return 0
+
+    def get_sheet_names():
+        xls = pd.ExcelFile('data/db.xlsm')
+        return xls.sheet_names[2:]
 
 
-        cursor.execute(insert_query, (flow_rate, flow_velocity))
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+#         flow_rate = num_or_zero(df.loc['Flow Rate']['Values'])
+#         flow_velocity = num_or_zero(df.loc['Flow Velocity']['Values'])
+#         print(f"Flow Rate: {flow_rate}, Flow Velocity: {flow_velocity} ")
         
-        if counter < 5:
-            counter += 1
-        else:
-            break
-    # Commit changes and close connection
-    conn.commit()
-    cursor.close()
-    conn.close()
+#         insert_query = """ INSERT INTO stream_hydrologies (flow_rate, flow_velocity) VALUES (%s, %s) """
 
-    print("Data uploaded successfully!")
 
-# Run the function
-upload_data_to_db()
+#         cursor.execute(insert_query, (flow_rate, flow_velocity))
+        
+#         if counter < 5:
+#             counter += 1
+#         else:
+#             break
+#     # Commit changes and close connection
+#     conn.commit()
+#     cursor.close()
+#     conn.close()
+
+#     print("Data uploaded successfully!")
+
+# # Run the function
+# upload_data_to_db()
