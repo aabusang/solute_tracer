@@ -1,0 +1,11 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/rstp/public_html/
+    - /bin/cp -R * $DEPLOYPATH
+    - /bin/cp .env.example $DEPLOYPATH.env
+    - /usr/local/cpanel/3rdparty/bin/git --git-dir=$DEPLOYPATH.git --work-tree=$DEPLOYPATH checkout -f
+    - /usr/local/cpanel/3rdparty/bin/git --git-dir=$DEPLOYPATH.git --work-tree=$DEPLOYPATH pull origin main
+    - /opt/cpanel/ea-php81/root/usr/bin/php $DEPLOYPATH/artisan migrate --force
+    - /opt/cpanel/ea-php81/root/usr/bin/php $DEPLOYPATH/artisan config:cache
+    - /opt/cpanel/ea-php81/root/usr/bin/php $DEPLOYPATH/artisan route:cache
